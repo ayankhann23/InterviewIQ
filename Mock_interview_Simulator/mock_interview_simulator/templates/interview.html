@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Live Mock Interview | InterviewIQ</title>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('interviewiq_theme');
+        if (saved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+  <!-- Top Glass Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="/" class="brand-wrapper">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <span class="brand-title">InterviewIQ</span>
+          <span class="brand-subtitle">Voice & Camera Interview</span>
+        </div>
+      </a>
+      <div class="header-actions">
+        <!-- Dark / Light Mode Switcher -->
+        <div class="theme-switcher" role="radiogroup" aria-label="Appearance Mode">
+          <button type="button" class="theme-opt-btn" id="theme-btn-dark" data-theme="dark" role="radio"
+            aria-checked="true" title="Switch to Dark Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span>Dark</span>
+          </button>
+          <button type="button" class="theme-opt-btn" id="theme-btn-light" data-theme="light" role="radio"
+            aria-checked="false" title="Switch to Light Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Light</span>
+          </button>
+        </div>
+
+        <div class="header-status">
+          <span class="status-pulse"></span>
+          <span>Interview Workspace</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrapper live-wrap">
+    <div class="hero-badge" style="margin-bottom: 0.75rem;">
+      <span>🎙️ AI Interactive Session</span>
+    </div>
+    <h1 class="hero-title" style="text-align: left; font-size: clamp(1.8rem, 3.5vw, 2.4rem); margin-bottom: 0.4rem;">
+      Live <span class="title-gradient">Mock Interview</span>
+    </h1>
+    <p class="small-note" style="margin-bottom: 1.25rem;">
+      Target role: <strong id="target-role" style="color: var(--accent-cyan);">{{ role }}</strong> • Camera observations
+      are feedback only. Video processing is executed securely in your local browser. Questions: {{ "AI-generated from
+      your resume" if question_source == "ai" else "built-in question bank" }} · Difficulty: {{ difficulty }}.
+    </p>
+
+    <!-- Two-column workspace grid -->
+    <div class="live-grid">
+      <!-- Left Column: Camera & Device Controls -->
+      <section class="live-card">
+        <h2><span>📹</span> Camera Preview</h2>
+        <video id="camera-preview" class="camera-preview" autoplay muted playsinline></video>
+
+        <div id="device-status" class="live-status" role="status">Camera and microphone have not been started.</div>
+        <div id="mic-level" class="small-note" aria-live="polite">Microphone level: unavailable</div>
+
+        <div class="live-actions">
+          <button id="start-devices">1. Allow camera & microphone</button>
+          <button id="start-monitor" disabled>2. Start monitoring</button>
+          <button id="stop-monitor" disabled>Stop monitoring</button>
+        </div>
+
+        <p class="small-note">⚡ Use Chrome or Edge on localhost. If camera hardware is unavailable, permission or device
+          notices will appear above.</p>
+      </section>
+
+      <!-- Right Column: Question & Live Speech Transcription -->
+      <section class="live-card">
+        <h2><span>💬</span> Interview Question</h2>
+        <p id="question-count" class="question-tracker">Question 1</p>
+        <div id="question-text" class="answer-box question-display">Press “Speak question” when you're ready.</div>
+
+        <div class="live-actions">
+          <button id="speak-question" disabled>🔊 Speak question</button>
+          <button id="start-answer" disabled>🎙️ Start answering</button>
+          <button id="done-answer" disabled>⏹️ Done answering</button>
+          <button id="next-question" disabled>Next question →</button>
+        </div>
+
+        <h3>Live Transcription</h3>
+        <div id="live-answer" class="answer-box" aria-live="polite">Your spoken answer will appear here.</div>
+
+        <h3>Saved Answer</h3>
+        <div id="saved-answer" class="answer-box">No answer saved yet.</div>
+
+        <h3>AI Feedback</h3>
+        <div id="ai-feedback" class="answer-box ai-feedback" aria-live="polite">
+          {% if ai_configured %}Your AI feedback appears here after you answer.{% else %}AI is not configured, so
+          answers will be saved without AI scoring. Add <code>NVIDIA_API_KEY</code> to <code>.env</code> and restart to
+          enable it.{% endif %}
+        </div>
+      </section>
+    </div>
+
+    <!-- Bottom Monitoring & Telemetry Status -->
+    <section class="live-card">
+      <h2><span>📊</span> Monitoring & Telemetry</h2>
+      <div id="monitor-status" class="live-status">Monitoring has not started.</div>
+
+      <h3>Session Event Log</h3>
+      <div id="event-log" class="event-log">No events yet.</div>
+
+      <div class="live-actions" style="margin-top: 1.25rem;">
+        <button id="finish-interview">Finish interview & view report →</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.INTERVIEW_CONFIG = {
+      role: {{ role | tojson }},
+      questions: {{ questions | tojson }},
+      maxFollowUps: {{ max_follow_ups | tojson }},
+      difficulty: {{ difficulty | tojson }},
+      questionSource: {{ question_source | tojson }}
+    };
+  </script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/voice.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/monitor.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/interview.js') }}"></script>
+</body>
+
+</html>

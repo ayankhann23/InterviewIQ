@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interview Report | InterviewIQ</title>
+  <script>
+    (function() {
+      try {
+        var saved = localStorage.getItem('interviewiq_theme');
+        if (saved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+  <!-- Top Glass Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="/" class="brand-wrapper">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <span class="brand-title">InterviewIQ</span>
+          <span class="brand-subtitle">Interview Evaluation</span>
+        </div>
+      </a>
+      <div class="header-actions">
+        <!-- Dark / Light Mode Switcher -->
+        <div class="theme-switcher" role="radiogroup" aria-label="Appearance Mode">
+          <button type="button" class="theme-opt-btn" id="theme-btn-dark" data-theme="dark" role="radio" aria-checked="true" title="Switch to Dark Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span>Dark</span>
+          </button>
+          <button type="button" class="theme-opt-btn" id="theme-btn-light" data-theme="light" role="radio" aria-checked="false" title="Switch to Light Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Light</span>
+          </button>
+        </div>
+
+        <div class="header-status">
+          <span class="status-pulse"></span>
+          <span>Report Generated</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrapper" style="max-width: 980px;">
+    <div class="hero-badge" style="margin-bottom: 0.75rem;">
+      <span>📊 Performance Analytics</span>
+    </div>
+    <h1 class="hero-title" style="text-align: left; font-size: clamp(2rem, 3.8vw, 2.6rem); margin-bottom: 0.4rem;">
+      Interview <span class="title-gradient">Summary</span>
+    </h1>
+    <p id="report-role" style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.75rem;">Loading report…</p>
+
+    <!-- Evaluation Section -->
+    <section class="live-card">
+      <h2><span>🎯</span> Evaluation & Scores</h2>
+      <div id="evaluation-summary">No evaluation data available.</div>
+    </section>
+
+    <!-- AI Coaching Summary -->
+    <section class="live-card" id="ai-summary-card" style="display:none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+        <h2 style="margin: 0;"><span>🧠</span> AI Coaching Summary</h2>
+        <button type="button" id="btn-retry-ai-summary" class="btn-voice" style="padding: 0.4rem 0.85rem; font-size: 0.82rem; display: none;" title="Regenerate summary with NVIDIA Nemotron">
+          <span>⚡</span> <span id="retry-ai-label">Regenerate AI Summary</span>
+        </button>
+      </div>
+      <div id="ai-summary"></div>
+    </section>
+
+    <!-- Resume Analysis -->
+    <section class="live-card" id="resume-card" style="display:none;">
+      <h2><span>📄</span> Resume Findings</h2>
+      <div id="resume-summary"></div>
+    </section>
+
+    <!-- Candidate Answers Section -->
+    <section class="live-card">
+      <h2><span>📝</span> Candidate Answers</h2>
+      <div id="report-answers">No report data found in this tab.</div>
+    </section>
+
+    <!-- Telemetry & Event Log -->
+    <section class="live-card">
+      <h2><span>📋</span> Telemetry & Event Log</h2>
+      <pre id="report-events"></pre>
+    </section>
+
+    <div style="margin-top: 2rem; margin-bottom: 2rem;">
+      <a class="btn-submit" href="/" style="text-decoration: none; display: inline-flex;">
+        <span>← Return to Home</span>
+      </a>
+    </div>
+  </main>
+
+  <script>
+  // All text from the interview, the AI and the resume is inserted with textContent (never innerHTML).
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const node = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+    const metric = (value, label) => { const m = node('div', 'metric'); m.appendChild(node('strong', null, value)); m.appendChild(document.createTextNode(label)); return m; };
+    const list = (parent, title, items) => {
+      if (!items || !items.length) return;
+      parent.appendChild(node('h4', null, title));
+      const ul = node('ul', 'ai-list');
+      items.forEach((t) => ul.appendChild(node('li', null, t)));
+      parent.appendChild(ul);
+    };
+    const bar = (parent, label, value) => {
+      const row = node('div', 'score-row');
+      row.appendChild(node('span', null, label));
+      const b = node('div', 'bar'); const f = node('span');
+      f.style.width = Math.max(0, Math.min(100, Number(value) || 0)) + '%';
+      b.appendChild(f);
+      row.append(b, node('strong', null, String(value)));
+      parent.appendChild(row);
+    };
+
+    const raw = sessionStorage.getItem('mockInterviewReport');
+    if (!raw) { $('report-role').textContent = 'No saved interview report was found. Complete an interview first in this browser tab.'; return; }
+    let r;
+    try { r = JSON.parse(raw); } catch (e) { $('report-role').textContent = 'The saved report could not be read.'; return; }
+    const report = r.report || null;
+    $('report-role').textContent = 'Target role: ' + (r.role || 'Not specified') + ' · Finished: '
+      + (r.finishedAt ? new Date(r.finishedAt).toLocaleString() : 'Unknown')
+      + (report ? ' · Difficulty: ' + report.difficulty + ' · Interview ' + report.interview_id : '');
+
+    // ---- Candidate answers (always shown, even if the report could not be generated) ----
+    const box = $('report-answers');
+    box.textContent = '';
+    const answered = (r.answers || []);
+    if (!answered.length) box.textContent = 'No answers were saved.';
+    answered.forEach((a, i) => box.appendChild(node('div', 'answer', 'Q' + (i + 1) + ': ' + (a.question || '') + '\n\nAnswer: ' + (a.answer || '(empty)'))));
+
+    const evalBox = $('evaluation-summary');
+    if (!report) {
+      evalBox.textContent = r.reportError
+        ? 'The AI report could not be completed: ' + r.reportError + ' Your answers are shown below and nothing was lost.'
+        : 'No evaluation data found. Complete an interview to generate scores.';
+    } else {
+      const sm = report.summary;
+      evalBox.textContent = '';
+      evalBox.appendChild(metric(sm.overall_score === null ? 'N/A' : sm.overall_score + '/100', 'Overall score'));
+      evalBox.appendChild(metric(sm.answered_main_count + '/' + sm.main_question_count, 'Questions answered'));
+      if (sm.follow_up_count) evalBox.appendChild(metric(sm.follow_up_average === null ? 'N/A' : sm.follow_up_average + '/100', 'Follow-up average (' + sm.follow_up_count + ')'));
+      if (sm.not_evaluated_count) evalBox.appendChild(node('p', 'warning', sm.not_evaluated_count + ' answered question(s) could not be evaluated by the AI and are not included in the overall score. Retry by taking the interview again when the AI service is available.'));
+      evalBox.appendChild(node('p', 'ai-note', 'How the score is calculated: ' + sm.scoring_method));
+      evalBox.appendChild(node('p', 'warning', report.disclaimer));
+
+      if (sm.topic_performance.length) {
+        evalBox.appendChild(node('h4', null, 'Topic-wise performance'));
+        sm.topic_performance.forEach((t) => bar(evalBox, t.topic + ' (' + t.questions + ')', t.average_score));
+      }
+
+      report.records.forEach((rec, i) => {
+        const ev = rec.evaluation || {};
+        const card = node('div', 'answer');
+        const scoreText = ev.status === 'unavailable' ? 'evaluation unavailable' : (ev.score + '/100');
+        card.appendChild(node('h3', null, 'Question ' + (i + 1) + (rec.kind === 'follow_up' ? ' (follow-up)' : '') + ' — ' + scoreText));
+        card.appendChild(node('p', null, rec.question));
+        card.appendChild(node('p', 'ai-note', 'Topic: ' + (rec.topic || 'General') + ' · Difficulty: ' + (rec.difficulty || '-')));
+        card.appendChild(node('p', null, 'Your answer: ' + (rec.answer || '(No answer captured)')));
+        if (ev.status === 'unavailable') {
+          card.appendChild(node('p', 'warning report-unavailable', 'AI evaluation unavailable for this answer (' + (ev.reason || 'unknown reason') + '). No score was assigned.'));
+          if (ev.static_reference_answer) { card.appendChild(node('h4', null, 'Static reference answer (not AI-generated)')); card.appendChild(node('p', null, ev.static_reference_answer)); }
+        } else {
+          Object.keys(ev.criterion_scores || {}).forEach((k) => bar(card, (report.criterion_labels[k] || k) + (ev.rubric_weights && ev.rubric_weights[k] ? ' (' + ev.rubric_weights[k] + '%)' : ''), ev.criterion_scores[k]));
+          if (ev.explanation) card.appendChild(node('p', 'feedback', ev.explanation));
+          list(card, 'What you did well', ev.strengths);
+          list(card, 'Missing concepts', ev.missing_concepts);
+          list(card, 'Mistakes', ev.mistakes);
+          if (ev.model_answer) { card.appendChild(node('h4', null, 'Sample answer')); card.appendChild(node('p', null, ev.model_answer)); }
+          if (ev.improvement_tip) { card.appendChild(node('h4', null, 'Tip to improve')); card.appendChild(node('p', null, ev.improvement_tip)); }
+        }
+        evalBox.appendChild(card);
+      });
+
+      // ---- AI coaching summary ----
+      const sumCard = $('ai-summary-card'); const sumBox = $('ai-summary');
+      sumCard.style.display = '';
+
+      function buildFallbackSummary(role, sm, recs, resumeAnalysis) {
+        const overallScore = sm ? sm.overall_score : null;
+        const roleName = role || (sm && sm.role) || 'Target Role';
+        const strengths = [];
+        const missingConcepts = [];
+        const mistakes = [];
+        const tips = [];
+
+        (recs || []).forEach(r => {
+          const ev = r.evaluation || {};
+          (ev.strengths || []).forEach(s => { if (s && !strengths.includes(s)) strengths.push(s); });
+          (ev.missing_concepts || []).forEach(m => { if (m && !missingConcepts.includes(m)) missingConcepts.push(m); });
+          (ev.mistakes || []).forEach(e => { if (e && !mistakes.includes(e)) mistakes.push(e); });
+          if (ev.improvement_tip && !tips.includes(ev.improvement_tip)) tips.push(ev.improvement_tip);
+        });
+
+        let comment = '';
+        if (overallScore !== null && overallScore !== undefined) {
+          if (overallScore >= 80) {
+            comment = `Candidate demonstrated strong competence for the ${roleName} role, achieving an overall score of ${overallScore}/100. Answers were structured, technically sound, and showed good domain knowledge. Continuing to refine concise delivery will make your interview performance outstanding.`;
+          } else if (overallScore >= 60) {
+            comment = `Candidate showed solid potential and good foundational understanding for ${roleName} with an overall score of ${overallScore}/100. While core concepts were addressed, some explanations would benefit from greater technical depth and specific real-world examples. Targeted review of key concepts will help elevate your readiness.`;
+          } else if (overallScore >= 40) {
+            comment = `Candidate completed the practice interview for ${roleName} scoring ${overallScore}/100. Fundamental awareness is present, but several technical criteria and detailed problem-solving steps need reinforcement. Focus on structured answering frameworks and technical precision.`;
+          } else {
+            comment = `Candidate completed the practice interview for ${roleName} with an overall score of ${overallScore}/100. Core concepts require additional preparation and hands-on practice. Consistent review of the sample answers and reference materials below will build confidence and accuracy.`;
+          }
+        } else {
+          comment = `Candidate completed the practice interview for ${roleName}. Review the topic-by-topic breakdowns and recommendations below to guide your next study phase.`;
+        }
+
+        const strList = strengths.length ? strengths.slice(0, 6) : [
+          `Demonstrated clear enthusiasm and engagement throughout the ${roleName} interview process.`,
+          'Communicated thoughts and reasoning in an organized manner.',
+          'Approached scenario-based and technical questions with practical intent.'
+        ];
+
+        const lowTopics = (sm && sm.topic_performance ? sm.topic_performance : [])
+          .filter(t => (t.average_score || 0) < 75)
+          .map(t => t.topic);
+        const impAreas = [];
+        if (lowTopics.length) impAreas.push(`Strengthen understanding in key topics: ${lowTopics.slice(0, 3).join(', ')}.`);
+        if (missingConcepts.length) missingConcepts.slice(0, 4).forEach(c => impAreas.push(`Deepen knowledge on: ${c}`));
+        if (!impAreas.length) {
+          impAreas.push('Incorporate more quantitative metrics and specific outcomes in your project narratives.');
+          impAreas.push('Structure answers clearly with context, actions taken, and measurable results.');
+        }
+
+        const commonMistakes = mistakes.length ? mistakes.slice(0, 5) : (
+          missingConcepts.length ? missingConcepts.slice(0, 3).map(c => `Omitted key concept: ${c}`) : ['No major conceptual errors were identified across evaluated answers.']
+        );
+
+        const resumeGaps = [];
+        if (resumeAnalysis && resumeAnalysis.skill_gaps) {
+          resumeAnalysis.skill_gaps.slice(0, 5).forEach(g => {
+            if (typeof g === 'object' && g.skill) {
+              resumeGaps.push(g.skill + (g.note ? ` (${g.note})` : ''));
+            } else if (typeof g === 'string') {
+              resumeGaps.push(g);
+            }
+          });
+        }
+        if (!resumeGaps.length) {
+          resumeGaps.push(`Align resume project bullet points more closely with required skills for ${roleName}.`);
+        }
+
+        const studyRecs = tips.length ? tips.slice(0, 5) : [
+          `Review standard architecture and best practices commonly tested for ${roleName}.`,
+          'Practice explaining technical decisions aloud within 60-90 second time frames.',
+          'Consult reference answers provided in each question card to benchmark depth.'
+        ];
+
+        const plan = [
+          'Week 1: Core Fundamentals Review - Study key missing concepts and revisit basic definitions.',
+          `Week 2: Role-Specific Deep Dive - Practice scenario-based questions tailored to ${roleName}.`,
+          'Week 3: Mock Interview Rehearsal - Record your answers aloud and refine delivery clarity and pacing.',
+          'Week 4: Final Polish - Re-take this interview simulation to measure progress and achieve target scores.'
+        ];
+
+        return {
+          overall_comment: comment,
+          technical_strengths: strList,
+          improvement_areas: impAreas.slice(0, 6),
+          common_mistakes: commonMistakes.slice(0, 6),
+          resume_skill_gaps: resumeGaps.slice(0, 6),
+          study_recommendations: studyRecs.slice(0, 6),
+          improvement_plan: plan
+        };
+      }
+
+      function renderCoachingSummary(a, isLiveAi) {
+        sumBox.textContent = '';
+        sumBox.appendChild(node('p', 'ai-text', a.overall_comment));
+        list(sumBox, 'Technical strengths', a.technical_strengths);
+        list(sumBox, 'Areas requiring improvement', a.improvement_areas);
+        list(sumBox, 'Common mistakes or missing concepts', a.common_mistakes);
+        list(sumBox, 'Resume-related skill gaps', a.resume_skill_gaps);
+        list(sumBox, 'Personalised study recommendations', a.study_recommendations);
+        list(sumBox, 'Practical improvement plan', a.improvement_plan);
+        const noteText = isLiveAi
+          ? 'Written by NVIDIA Nemotron from the stored evaluations above; it does not change the scores.'
+          : 'Coaching summary compiled from your evaluated answers; it does not change the scores.';
+        sumBox.appendChild(node('p', 'ai-note', noteText));
+      }
+
+      let currentAiSummary = report.ai_summary;
+      const hadError = Boolean(report.ai_summary_error && !currentAiSummary);
+      if (!currentAiSummary) {
+        currentAiSummary = buildFallbackSummary(r.role || report.role, report.summary, report.records, report.resume_analysis);
+        report.ai_summary = currentAiSummary;
+        report.ai_summary_error = null;
+        try { sessionStorage.setItem('mockInterviewReport', JSON.stringify(r)); } catch (e) {}
+      }
+
+      renderCoachingSummary(currentAiSummary, !hadError);
+
+      const retryBtn = $('btn-retry-ai-summary');
+      const retryLabel = $('retry-ai-label');
+      if (retryBtn) {
+        retryBtn.style.display = 'inline-flex';
+        retryBtn.addEventListener('click', async () => {
+          retryBtn.disabled = true;
+          if (retryLabel) retryLabel.textContent = 'Generating with AI…';
+          try {
+            const resp = await fetch('/api/report/retry-summary', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                role: r.role || report.role,
+                summary: report.summary,
+                records: report.records,
+                resume_analysis: report.resume_analysis
+              })
+            });
+            const data = await resp.json().catch(() => ({}));
+            if (data.ok && data.ai_summary) {
+              report.ai_summary = data.ai_summary;
+              report.ai_summary_error = null;
+              try { sessionStorage.setItem('mockInterviewReport', JSON.stringify(r)); } catch (e) {}
+              renderCoachingSummary(data.ai_summary, data.source === 'ai');
+              if (retryLabel) retryLabel.textContent = 'AI Summary Updated ✓';
+              setTimeout(() => { if (retryLabel) retryLabel.textContent = 'Regenerate AI Summary'; retryBtn.disabled = false; }, 3000);
+            } else {
+              throw new Error(data.error || 'Retry failed');
+            }
+          } catch (err) {
+            if (retryLabel) retryLabel.textContent = 'Retry Available';
+            retryBtn.disabled = false;
+          }
+        });
+      }
+
+      // ---- Resume findings ----
+      if (report.resume_analysis) {
+        const ra = report.resume_analysis;
+        $('resume-card').style.display = '';
+        const rb = $('resume-summary');
+        rb.appendChild(node('p', 'ai-text', ra.summary));
+        if (ra.role_match_score !== null && ra.role_match_score !== undefined) {
+          bar(rb, 'AI-estimated role match', ra.role_match_score);
+          rb.appendChild(node('p', 'ai-note', ra.role_match_disclaimer));
+        }
+        list(rb, 'Skill gaps (not mentioned ≠ lacking)', (ra.skill_gaps || []).map((g) => g.skill + (g.note ? ' — ' + g.note : '')));
+        list(rb, 'Resume improvements', ra.resume_improvements);
+      }
+    }
+
+    $('report-events').textContent = (r.events || []).join('\n') || 'No events recorded.';
+  })();
+  </script>
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mock Interview Simulator & Resume Intelligence</title>
+  <meta name="description"
+    content="AI-driven mock interview simulator and resume analyzer. Upload your PDF resume to extract skills, evaluate role match, and practice curated interview questions.">
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('interviewiq_theme');
+        if (saved === 'light') {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      } catch (e) { }
+    })();
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+  <!-- Top Glass Header -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="/" class="brand-wrapper">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <span class="brand-title">InterviewIQ</span>
+          <span class="brand-subtitle">Mock Simulator & Analyzer</span>
+        </div>
+      </a>
+      <div class="header-actions">
+        <!-- Dark / Light Mode Option Switcher -->
+        <div class="theme-switcher" role="radiogroup" aria-label="Appearance Mode">
+          <button type="button" class="theme-opt-btn" id="theme-btn-dark" data-theme="dark" role="radio"
+            aria-checked="true" title="Switch to Dark Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <span>Dark</span>
+          </button>
+          <button type="button" class="theme-opt-btn" id="theme-btn-light" data-theme="light" role="radio"
+            aria-checked="false" title="Switch to Light Mode">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+            <span>Light</span>
+          </button>
+        </div>
+
+        <div class="header-status">
+          <span class="status-pulse"></span>
+          <span>{{ 'AI features enabled' if ai_configured else 'AI not configured (keyword mode)' }}</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrapper">
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <span> Powered by Resume Intelligence</span>
+      </div>
+      <h1 class="hero-title">
+        Elevate Your <span class="title-gradient">Interview Readiness</span>
+      </h1>
+      <p class="hero-desc">
+        Upload your PDF resume to uncover your matched job profile, extract core technical competencies, and practice
+        real-world interview scenarios.
+      </p>
+    </section>
+
+    <!-- Error Banner -->
+    {% if error %}
+    <div class="alert-error" role="alert">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <h4>Upload Issue</h4>
+        <p>{{ error }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upload Section -->
+    <section class="upload-card">
+      <form id="resume-upload-form" action="/" method="POST" enctype="multipart/form-data">
+        <input type="file" id="resume-file-input" name="resume" accept=".pdf,application/pdf" style="display: none;"
+          required>
+
+        <div class="dropzone-container" id="dropzone">
+          <div class="dropzone-icon-box">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="12" y1="18" x2="12" y2="12"></line>
+              <line x1="9" y1="15" x2="12" y2="12"></line>
+              <line x1="15" y1="15" x2="12" y2="12"></line>
+            </svg>
+          </div>
+          <div class="dropzone-prompt">
+            <h3>Drop your PDF resume here, or <span
+                style="color: var(--primary); text-decoration: underline;">browse</span></h3>
+            <p>Our analyzer extracts your technical background to tailor simulated interview questions</p>
+          </div>
+          <div class="dropzone-specs">
+            <span>📄 PDF Documents Only</span>
+            <span>•</span>
+            <span>⚡ Up to 10 MB</span>
+          </div>
+        </div>
+
+        <!-- Selected File Preview -->
+        <div class="file-selected-box" id="file-selected-box">
+          <div class="file-selected-info">
+            <div class="pdf-badge-icon">PDF</div>
+            <div>
+              <div class="file-selected-name" id="file-selected-name">resume.pdf</div>
+              <div class="file-selected-size" id="file-selected-size">0 KB</div>
+            </div>
+          </div>
+          <button type="button" class="btn-clear-file" id="btn-clear-file" title="Remove selected file">✕</button>
+        </div>
+
+        <!-- Submit Bar -->
+        <div class="upload-action-row">
+          <div class="upload-hints">
+            <span>🔒 Secure in-memory processing</span>
+            <span>⚡ Instant breakdown</span>
+          </div>
+          <button type="submit" class="btn-submit" id="btn-submit" disabled>
+            <span>Scan Resume & Launch Simulator</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Results Section (Visible when analyzed) -->
+    {% if suggested_role or resume_text %}
+    <section class="results-dashboard" id="results-dashboard">
+
+      <div class="dashboard-header">
+        <div class="dashboard-title-group">
+          <h2>Resume Analysis & Interview Deck</h2>
+          <p>Personalized evaluation based on your parsed experience</p>
+        </div>
+        <a href="/" class="btn-copy" style="text-decoration: none; padding: 0.5rem 1rem;">
+          <span>↺ Analyze Another Resume</span>
+        </a>
+        <a href="{{ url_for('setup', role=suggested_role) }}" class="btn-submit"
+          style="text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1rem;">Start Voice
+          & Camera Interview →</a>
+      </div>
+
+      <!-- KPI Metrics Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card highlight">
+          <div class="kpi-icon-header">
+            <span class="kpi-label">Target Role Match</span>
+            <div class="kpi-icon role">🎯</div>
+          </div>
+          <div class="kpi-value">{{ suggested_role or "General Profile" }}</div>
+          <div class="kpi-subtext">Identified via technical keyword weighting</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-header">
+            <span class="kpi-label">Skills Identified</span>
+            <div class="kpi-icon skills">💡</div>
+          </div>
+          <div class="kpi-value">{{ skills|length }} Key Competencies</div>
+          <div class="kpi-subtext">Matched against core industry requirements</div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon-header">
+            <span class="kpi-label">Content Volume</span>
+            <div class="kpi-icon length">📄</div>
+          </div>
+          <div class="kpi-value">{{ resume_text.split()|length }} Words</div>
+          <div class="kpi-subtext">{{ resume_text|length }} characters extracted cleanly</div>
+        </div>
+      </div>
+
+      <!-- Skills Detected Card -->
+      <div class="skills-card">
+        <div class="card-heading">
+          <div class="card-heading-title">
+            <span>Verified Skills Extracted</span>
+          </div>
+          <span style="font-size: 0.85rem; color: var(--accent-emerald); font-weight: 600;">
+            ✓ {{ skills|length }} detected
+          </span>
+        </div>
+
+        <div class="skills-chip-wrapper">
+          {% if skills %}
+          {% for skill in skills %}
+          <div class="skill-chip">
+            <span class="skill-check">✓</span>
+            <span>{{ skill }}</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <p class="no-skills-notice">No standard keywords matched directly. Review the extracted text below or try
+            adding clear skill sections in your resume.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- AI Resume Analysis (NVIDIA Nemotron). Filled in by static/js/resume_ai.js -->
+      <div class="skills-card" id="ai-resume-card"
+        data-enabled="{{ 'true' if (ai_configured and resume_ready) else 'false' }}">
+        <div class="card-heading">
+          <div class="card-heading-title">
+            <span>🤖 AI Resume Analysis</span>
+          </div>
+          <button type="button" class="btn-copy" id="ai-resume-retry" style="display:none; padding: 0.4rem 0.9rem;">↻
+            Retry</button>
+        </div>
+        <div id="ai-resume-status" class="ai-status" role="status">
+          {% if not ai_configured %}
+          AI analysis is not configured. Add <code>NVIDIA_API_KEY</code> to the <code>.env</code> file and restart the
+          app. The keyword analysis above still works.
+          {% elif not resume_ready %}
+          Upload your resume again to run the AI analysis.
+          {% else %}
+          Analysing your resume with NVIDIA Nemotron… this can take a few seconds.
+          {% endif %}
+        </div>
+        <div id="ai-resume-body"></div>
+      </div>
+
+      <!-- Tailored Mock Interview Simulator -->
+      <section class="interview-section">
+        <div class="interview-header">
+          <h3 style="font-family: 'Outfit', sans-serif; font-size: 1.45rem; font-weight: 700;">
+            Simulated Interview Practice: {{ suggested_role }}
+          </h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Custom mock interview questions specifically tailored to your target profession and skill stack.
+          </p>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="interview-tabs">
+          <button class="interview-tab-btn active" data-filter="all">All Questions</button>
+          <button class="interview-tab-btn" data-filter="technical">Technical Deep-Dive</button>
+          <button class="interview-tab-btn" data-filter="scenario">Architecture & System</button>
+          <button class="interview-tab-btn" data-filter="behavioral">Behavioral (STAR)</button>
+        </div>
+
+        <!-- Question Cards Grid -->
+        <div class="questions-grid">
+
+          {% if suggested_role == "AI/ML Engineer" %}
+          <!-- AI/ML Question 1 -->
+          <div class="question-card" data-category="technical">
+            <div class="question-meta">
+              <span class="question-tag">Technical • Core ML</span>
+              <span class="difficulty-pill">★ Medium / Hard</span>
+            </div>
+            <div class="question-text">
+              How do you mitigate overfitting in deep neural networks, and how do you decide between L1/L2
+              regularization, Dropout, and Early Stopping?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Discuss validation loss trajectories, how dropout randomly
+              deactivates activations during training, and weight penalty differences between L1 (sparsity) and L2
+              (weight shrinking).
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-q1">
+                <span>✏️ Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-q1">
+                <textarea class="practice-textarea"
+                  placeholder="Draft your response here to test your explanation structure..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI/ML Question 2 -->
+          <div class="question-card" data-category="scenario">
+            <div class="question-meta">
+              <span class="question-tag">Architecture • MLOps</span>
+              <span class="difficulty-pill">★ Advanced</span>
+            </div>
+            <div class="question-text">
+              Explain how you would design an end-to-end inference pipeline for a model experiencing continuous data
+              drift in production.
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Reference Kolmogorov-Smirnov or PSI tests for drift detection, shadow
+              deployments / canary testing, feature stores, and automated retraining triggers.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-q2">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-q2">
+                <textarea class="practice-textarea" placeholder="Draft your architecture workflow..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          {% elif suggested_role == "Python Developer" %}
+          <!-- Python Question 1 -->
+          <div class="question-card" data-category="technical">
+            <div class="question-meta">
+              <span class="question-tag">Technical • Python Core</span>
+              <span class="difficulty-pill">★ Medium</span>
+            </div>
+            <div class="question-text">
+              How does Python's GIL (Global Interpreter Lock) impact multithreading vs multiprocessing, and when would
+              you choose asyncio?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Explain CPU-bound tasks (multiprocessing avoids GIL overhead) vs
+              I/O-bound tasks (threading or asyncio event loop).
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-py1">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-py1">
+                <textarea class="practice-textarea"
+                  placeholder="Outline your answer regarding memory, context switching, and GIL..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Python Question 2 -->
+          <div class="question-card" data-category="scenario">
+            <div class="question-meta">
+              <span class="question-tag">Architecture • Backend API</span>
+              <span class="difficulty-pill">★ Medium / Hard</span>
+            </div>
+            <div class="question-text">
+              In Flask or Django, how do you handle database connection pooling and asynchronous long-running background
+              tasks?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Mention Celery, Redis Queue, or background workers to prevent
+              blocking HTTP workers like Gunicorn or uWSGI.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-py2">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-py2">
+                <textarea class="practice-textarea" placeholder="Draft your answer..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          {% elif suggested_role == "Web Developer" %}
+          <!-- Web Dev Question 1 -->
+          <div class="question-card" data-category="technical">
+            <div class="question-meta">
+              <span class="question-tag">Technical • Frontend & Performance</span>
+              <span class="difficulty-pill">★ Medium</span>
+            </div>
+            <div class="question-text">
+              How do the Critical Rendering Path, Cumulative Layout Shift (CLS), and Largest Contentful Paint (LCP)
+              affect user experience and SEO?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> DOM/CSSOM construction, minimizing render-blocking assets, font
+              display swapping, image dimension attributes.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-web1">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-web1">
+                <textarea class="practice-textarea" placeholder="Draft your technical explanation..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Web Dev Question 2 -->
+          <div class="question-card" data-category="scenario">
+            <div class="question-meta">
+              <span class="question-tag">Architecture • State & Network</span>
+              <span class="difficulty-pill">★ Medium</span>
+            </div>
+            <div class="question-text">
+              How do you secure web applications against Cross-Site Scripting (XSS) and Cross-Site Request Forgery
+              (CSRF)?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Content Security Policy (CSP), sanitizing user input, SameSite
+              cookies, CSRF tokens on state-changing requests.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-web2">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-web2">
+                <textarea class="practice-textarea" placeholder="Draft your security strategy..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          {% elif suggested_role == "Data Analyst" %}
+          <!-- Data Analyst Question 1 -->
+          <div class="question-card" data-category="technical">
+            <div class="question-meta">
+              <span class="question-tag">Technical • SQL & Analytics</span>
+              <span class="difficulty-pill">★ Medium</span>
+            </div>
+            <div class="question-text">
+              Explain the difference between ROW_NUMBER(), RANK(), and DENSE_RANK() in SQL window functions with a
+              real-world scenario.
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Tie-breaking behaviors, consecutive numbering without gaps
+              (DENSE_RANK), top N candidates by category.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-da1">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-da1">
+                <textarea class="practice-textarea" placeholder="Provide SQL windowing examples..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Analyst Question 2 -->
+          <div class="question-card" data-category="scenario">
+            <div class="question-meta">
+              <span class="question-tag">Analytics • Business Insight</span>
+              <span class="difficulty-pill">★ Medium</span>
+            </div>
+            <div class="question-text">
+              How do you identify outliers and handle missing data without introducing bias into executive dashboard
+              reporting?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> IQR vs Z-scores, median imputation vs domain-specific exclusions,
+              tracking imputation flags.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-da2">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-da2">
+                <textarea class="practice-textarea" placeholder="Explain your methodology..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          {% else %}
+          <!-- General Question 1 -->
+          <div class="question-card" data-category="technical">
+            <div class="question-meta">
+              <span class="question-tag">Technical • Problem Solving</span>
+              <span class="difficulty-pill">★ Entry / Mid</span>
+            </div>
+            <div class="question-text">
+              Walk me through the most technically challenging project listed on your resume. What trade-offs did you
+              face?
+            </div>
+            <div class="key-tips-box">
+              <strong>Key Talking Points:</strong> Break down the problem statement, choices considered, constraints
+              (time, memory, cost), and concrete outcomes.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-gen1">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-gen1">
+                <textarea class="practice-textarea" placeholder="Structure your project narrative..."></textarea>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Universal Behavioral Question 1 -->
+          <div class="question-card" data-category="behavioral">
+            <div class="question-meta">
+              <span class="question-tag">Behavioral • STAR Framework</span>
+              <span class="difficulty-pill">★ Universal</span>
+            </div>
+            <div class="question-text">
+              Tell me about a time when you received critical feedback or had a disagreement with a team member
+              regarding a technical decision. How did you resolve it?
+            </div>
+            <div class="key-tips-box">
+              <strong>STAR Guide:</strong> Situation (context) → Task (your responsibility) → Action (active listening,
+              data-driven compromise) → Result (successful deliverable & team cohesion).
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-star1">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-star1">
+                <textarea class="practice-textarea" placeholder="Draft your STAR story..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Universal Behavioral Question 2 -->
+          <div class="question-card" data-category="behavioral">
+            <div class="question-meta">
+              <span class="question-tag">Behavioral • Adaptability</span>
+              <span class="difficulty-pill">★ Universal</span>
+            </div>
+            <div class="question-text">
+              Describe a scenario where project requirements drastically changed mid-development or near a release
+              deadline. How did you prioritize?
+            </div>
+            <div class="key-tips-box">
+              <strong>STAR Guide:</strong> Highlight scope triaging, communication with stakeholders, and delivering the
+              highest-leverage components first.
+            </div>
+            <div class="answer-practice-zone">
+              <button type="button" class="practice-toggle-btn" data-target="practice-star2">
+                <span> Practice Answering</span>
+              </button>
+              <div class="practice-box" id="practice-star2">
+                <textarea class="practice-textarea" placeholder="Draft your response..."></textarea>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Extracted Text Explorer -->
+      <div class="text-viewer-card">
+        <div class="viewer-header">
+          <div class="window-dots">
+            <div class="dot red"></div>
+            <div class="dot yellow"></div>
+            <div class="dot green"></div>
+          </div>
+          <div class="viewer-title">
+            <span>📄 parsed_resume_content.txt</span>
+          </div>
+          <button type="button" class="btn-copy" id="btn-copy-text">
+            <span>📋 Copy Raw Text</span>
+          </button>
+        </div>
+        <div class="viewer-content" id="resume-raw-text">{{ resume_text }}</div>
+      </div>
+
+    </section>
+    {% endif %}
+
+  </main>
+
+  <!-- Clean Footer -->
+  <footer class="app-footer">
+    <p>Mock Interview Simulator &bull; Powered by Flask & PyMuPDF &bull; Designed for Career Excellence</p>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/resume_ai.js') }}"></script>
+</body>
+
+</html>
